@@ -19,16 +19,16 @@
                                 </template>
                                 <!-- 二级菜单标题 -->
                                 <template v-for="subItem in item.subs" :key="subItem.index">
-                                    <el-menu-item :index="subItem.index" @click="() => handleMenuItem(subItem)">{{
+                                    <el-menu-item :index="subItem.index" @click="handleMenuItem(subItem)">{{
                                         subItem.title
-                                    }}</el-menu-item>
+                                        }}</el-menu-item>
                                 </template>
                             </el-sub-menu>
                         </template>
 
                         <!-- 一级菜单 -->
                         <template v-else>
-                            <el-menu-item :index="item.index" :key="item.title" @click="() => handleMenuItem(item)">
+                            <el-menu-item :index="item.index" :key="item.title" @click="handleMenuItem(item)">
                                 <el-icon>
                                     <document />
                                 </el-icon>
@@ -46,9 +46,9 @@
                         active-text-color="#ffd04b">
                         <el-menu-item index="0" class="fr">
                             <span @click.stop="toggleDark()">暗黑模式</span>
-                            <el-switch size="small" v-model="isDark" style="margin: 0 5px;"/>
+                            <el-switch size="small" v-model="isDark" style="margin: 0 5px;" />
                         </el-menu-item>
-                        
+
                         <el-menu-item index="1" class="fr">管理员-1</el-menu-item>
                         <el-sub-menu index="2" class="fr">
                             <template #title class="fr">我的工作台</template>
@@ -63,9 +63,16 @@
                 <el-main class="el-main">
                     <el-tabs type="border-card" v-model="activeTabName" class="demo-tabs" @tab-remove="handleRemove"
                         @tab-click="handleSwitchRoute">
+                        <el-tab-pane label="首页" name="home">
+                            <keep-alive>
+                                <component :is="Home_" />
+                            </keep-alive>
+                        </el-tab-pane>
                         <el-tab-pane v-for="item in editableTabs" :key="item.index" :label="item.title"
                             :name="item.index" :closable="handleisClose(item)">
-                            <router-view />
+                            <keep-alive>
+                                <component :is="item.component" />
+                            </keep-alive>
                         </el-tab-pane>
                     </el-tabs>
                 </el-main>
@@ -81,10 +88,16 @@ import {
     Location,
     Setting,
 } from "@element-plus/icons-vue";
+import { shallowRef } from "vue";
 import { ElMessageBox } from "element-plus";
-import { ref } from "vue";
 import { useDark, useToggle } from '@vueuse/core'
-
+import Achievement from './manage/Achievement.vue';
+import Class from './manage/Class.vue';
+import College from './manage/College.vue';
+import Major from './manage/Major.vue';
+import User from './manage/User.vue';
+import Home from './Main.vue';
+import Test from './Test.vue';
 
 
 export default {
@@ -93,12 +106,19 @@ export default {
     },
     setup() {
         const isDark = useDark()
-            
+
         const toggleDark = useToggle(isDark)
+
+        const editableTabs = shallowRef([
+            ])
+
+        const Home_ = shallowRef(Home)
 
         return {
             toggleDark,
-            isDark
+            isDark,
+            editableTabs,
+            Home_
         }
     },
     data() {
@@ -106,30 +126,22 @@ export default {
         return {
             //当前选项卡
             activeTabName: "home",
-            //需要显示的标签数组
-            editableTabs: [
-                {
-                    title: "首页",
-                    index: "home",
-                },
-            ],
             //左侧菜单选项配置
             asideMenu: [
                 {
                     title: "首页",
                     index: "home",
                 },
-
                 {
                     title: "系统管理",
                     subs: [
                         {
-                            title: "用户管理",
-                            index: "user",
+                            title: "成果管理",
+                            index: "achievement",
                         },
                         {
-                            title: "综测管理",
-                            index: "achievement",
+                            title: "用户管理",
+                            index: "user",
                         },
                         {
                             title: "班级管理",
@@ -150,7 +162,6 @@ export default {
                     index: "test",
                 },
             ],
-            // isDark: ref(true),
         };
     },
     components: {
@@ -160,84 +171,82 @@ export default {
         Setting,
     },
     watch: {
-        activeTabName: function () {
-            console.log("高亮的index值", this.activeTabName);
-        },
     },
     methods: {
         handleisClose(item) {
-            if (item.index == "home") {
-                return false;
-            }
-            return true;
+            return item.index !== "home";
         },
-        //点击二级菜单标题 和 没有下一级菜单的标题
-        //添加显示的标签
         handleMenuItem(obj) {
-            //高亮设置
+            if (obj.index === "home") {
+                this.activeTabName = "home";
+                this.$router.push("/home");
+                return
+            }
             this.activeTabName = obj.index;
             let result = this.editableTabs.findIndex((item) => {
-                return item.index == obj.index;
+                return item.index === obj.index;
             });
-            if (result != -1) {
+            if (result !== -1) {
                 return;
             }
-            this.editableTabs.push(obj);
+            this.editableTabs.push({ ...obj, component: this.getComponent(obj.index) });
         },
-
-        //点击切换tab标签，切换组件
         handleSwitchRoute(tabsPaneContext) {
-            let tabPaneName = tabsPaneContext.paneName;
-            //处理一个特殊情况，首页的index 为 '' ，这里取得值为0
-            if (tabPaneName == 0) {
-                tabPaneName = "";
-            }
+            let tabPaneName = tabsPaneContext.paneName || "home";
             this.$router.push("/" + tabPaneName);
         },
-
-        //(1)移除标签，（2）返回前一个路由
-        //删除: 需要当前索引 ，设置路由和高亮，上一个对象的index
         handleRemove(tabPaneName) {
             let tempArr = this.editableTabs;
-            let eleIndex = this.editableTabs.findIndex((item) => {
-                return item.index == tabPaneName;
+            let eleIndex = tempArr.findIndex((item) => {
+                return item.index === tabPaneName;
             });
-            //上一个路由的index
-            let routeIndex;
-            for (let p in tempArr) {
-                if (tempArr[p].index == tabPaneName) {
-                    routeIndex = tempArr[p - 1].index;
-                }
-            }
-            //高亮和退到前一个路由
-            this.activeTabName = routeIndex;
-            this.$router.push("/" + routeIndex);
-            //删除当前关闭的路由标签
-            this.editableTabs.splice(eleIndex, 1);
-        },
+            if (eleIndex === -1) return;
 
-        //退出登陆
+            // 上一个标签页的 index
+            let routeIndex = eleIndex > 0 ? tempArr[eleIndex - 1].index : (tempArr[1]?.index || "home");
+            let currentTabName = this.activeTabName;
+
+            this.editableTabs.splice(eleIndex, 1);
+
+            // 判断当前标签和将要切换的标签是否相同，如果相同先跳转到临时路由再跳回目标路由
+            if (currentTabName === routeIndex) {
+                this.$router.push("/redirect").then(() => {
+                    this.$router.push("/" + routeIndex);
+                });
+            } else {
+                this.activeTabName = routeIndex;
+                this.$router.push("/" + routeIndex);
+            }
+        },
         exitLogin() {
             ElMessageBox.confirm("真的要退出登陆吗?", "提示", {
                 confirmButtonText: "确认",
                 cancelButtonText: "取消",
                 type: "warning",
-            })
-                .then(() => {
-                    localStorage.removeItem("isLogin");
-                    this.$router.push("/login");
-                })
-                .catch(() => {
-                    //取消：就不做任何提示了
-                });
+            }).then(() => {
+                localStorage.removeItem("isLogin");
+                this.$router.push("/login");
+            });
         },
-
-        // 切换暗黑模式
-        // toggleDark(e) {
-        //     console.log(this.isDark, e, )
-        //     useToggle(isDark_)
-        // }
-    },
+        getComponent(index) {
+            switch (index) {
+                case 'achievement':
+                    return Achievement;
+                case 'class':
+                    return Class;
+                case 'college':
+                    return College;
+                case 'major':
+                    return Major;
+                case 'user':
+                    return User;
+                case 'test':
+                    return Test;
+                default:
+                    return Home;
+            }
+        }
+    }
 };
 </script>
 
@@ -276,7 +285,7 @@ export default {
 
 
 .el-aside {
-    width: 240px;
+    width: 200px;
     background: #001529;
     padding-top: 58px;
 }

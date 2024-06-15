@@ -3,34 +3,71 @@
         <el-row style="height: 100%;">
             <el-col :span="12" style="height: 100%;">
                 <el-select-v2 v-model="searchType" :options="selectType" placeholder="Please select"
-                    style="width: 80px" />
+                    style="width: 100px" />
                 <el-input class="search-input" v-model="search" placeholder="搜索"></el-input>
             </el-col>
             <el-col :span="12" style="height: 100%; text-align: right;">
-                <el-button type="primary" icon="Plus" style="margin-right: 20px;">新增用户</el-button>
+                <el-switch v-model="detailManageTable" style="margin-right: 20px;" inactive-text="简化列表" />
+                <el-button icon="Refresh" style="margin-right: 20px;" @click="fetchData">刷新</el-button>
+                <el-tooltip content="暂不支持新增用户" placement="top">
+                    <el-button type="primary" icon="Plus" style="margin-right: 20px;" @click="addData"
+                        :disabled="true">新增用户</el-button>
+                </el-tooltip>
             </el-col>
         </el-row>
     </div>
     <div class="table-container card ">
         <el-auto-resizer>
             <template #default="{ height, width }">
-                <el-table-v2 :columns="columns" :data="filterTableData" :width="width" :height="height" fixed />
+                <el-table-v2 v-loading="tableLoading" :columns="columns" :data="filterTableData" :width="width"
+                    :height="height" fixed />
             </template>
         </el-auto-resizer>
     </div>
-    <el-drawer v-model="drawer.show" title="编辑用户信息" direction="rtl" size="500px">
+    <el-drawer v-model="drawer.show" :before-close="cancelForm" title="编辑用户信息" direction="rtl" size="500px">
         <div class="edit-drawer__content">
-            <!-- <el-form :model="form">
-                <el-form-item label="Name" :label-width="formLabelWidth">
-                    <el-input v-model="form.name" autocomplete="off" />
+            <el-form ref="baseForm" :model="formData" label-width="auto" :rules="rules">
+                <el-form-item label="id">
+                    <el-input v-model="formData.user_id" autocomplete="off" :disabled="true" />
                 </el-form-item>
-                <el-form-item label="Area" :label-width="formLabelWidth">
-                    <el-select v-model="form.region" placeholder="Please select activity area">
-                        <el-option label="Area1" value="shanghai" />
-                        <el-option label="Area2" value="beijing" />
-                    </el-select>
+                <el-form-item label="昵称" prop="nick_name">
+                    <el-input v-model="formData.nick_name" autocomplete="off" />
                 </el-form-item>
-            </el-form> -->
+                <el-form-item label="头像链接" prop="avatar_url">
+                    <el-input v-model="formData.avatar_url" autocomplete="off" />
+                </el-form-item>
+                <el-form-item label="学号" prop="student_id">
+                    <el-input v-model="formData.student_id" autocomplete="off" />
+                </el-form-item>
+                <el-form-item label="用户类型" prop="user_type">
+                    <el-select-v2 v-model="formData.user_type" :options="userTypes" placeholder="请选择" />
+                </el-form-item>
+                <el-form-item label="班级名" prop="class_id">
+                    <el-select-v2 v-model="formData.class_id" filterable :options="classData.value" remote
+                        :remote-method="fetchSelectData" :loading="classData.loading" placeholder="请选择"
+                        @change="changeSelectData">
+                        <template #loading>
+                            <el-icon>
+                                <Loading />
+                            </el-icon>
+                        </template>
+                    </el-select-v2>
+                </el-form-item>
+                <el-form-item label="专业名">
+                    <el-tooltip content="该选项由班级决定，无法修改" placement="top">
+                        <el-select-v2 v-model="formData.major_id" filterable :options="majorData" :disabled="true"
+                            placeholder="请选择" />
+                    </el-tooltip>
+                </el-form-item>
+
+                <el-form-item label="二级学院">
+                    <el-tooltip content="该选项由专业决定，无法修改" placement="top">
+                        <el-select-v2 v-model="formData.college_id" :options="collegeData" :disabled="true"
+                            placeholder="请选择" />
+                    </el-tooltip>
+
+                </el-form-item>
+            </el-form>
             <div class="edit-drawer__footer">
                 <el-button @click="cancelForm">取消</el-button>
                 <el-button type="primary" :loading="drawer.loading" @click="updateData">
@@ -42,8 +79,8 @@
 </template>
 
 <script>
-import { computed, ref, h, reactive } from 'vue';
-import { ElButton } from "element-plus";
+import { computed, ref, h, reactive, inject } from 'vue';
+import { ElButton, ElMessage, ElMessageBox, ElTag } from "element-plus";
 
 
 
@@ -54,49 +91,74 @@ export default {
     setup() {
         // 动态信息
         const search = ref('');
-        const searchType = ref('name');
+        const searchType = ref('nick_name');
+        const detailManageTable = inject('detailManageTable');
         const drawer = reactive({
-            show: true,
+            show: false,
             loading: false
         })
-
-
-        const cancelForm = () => {
-            drawer.show = false
-            drawer.loading = false
-        }
+        const tableLoading = ref(false)
+        const tableData = ref([]);
+        const majorData = ref([]);
+        const classData = reactive({
+            value: [],
+            loading: false
+        })
+        const collegeData = ref([])
+        const formData = reactive({
+            user_id: 'auto',
+            nick_name: '',
+            avatar_url: '',
+            student_id: '',
+            user_type: '',
+            class_id: '',
+            major_id: '',
+            college_id: '',
+        })
+        const baseForm = ref(null)
 
 
         // 定值
+        const userTypes = [
+            {
+                value: 'student',
+                label: '学生',
+                type: 'info',
+            }, {
+                value: 'teacher',
+                label: '教师',
+                type: 'primary',
+            }, {
+                value: 'admin',
+                label: '管理员',
+                type: 'success',
+            }
+        ]
         const selectType = [
             {
-                value: 'name',
-                label: '姓名',
+                value: 'nick_name',
+                label: '昵称',
             },
             {
                 value: 'student_id',
                 label: '学号',
+            },
+            {
+                value: 'class',
+                label: '班级',
+            }, {
+                value: 'major',
+                label: '专业',
+            }, {
+                value: 'college',
+                label: '学院',
+            },
+            {
+                value: 'id',
+                label: 'id',
             }
         ]
-        const tableData = [
-            {
-                user_id: '1',
-                name: '李四',
-                student_id: '22104030221',
-                collage: '侦查学院',
-                class: '22级侦查学一区',
-                major: '侦查学'
-            },
-            {
-                user_id: '2',
-                name: '张三',
-                student_id: '22104030228',
-                collage: '信息技术学院',
-                class: '22级数据科学与大数据技术二区',
-                major: '数据科学与大数据技术'
-            },
-        ];
-        const columns = [
+        const columns = ref([
             {
                 key: 'user_id',
                 dataKey: 'user_id',
@@ -105,9 +167,16 @@ export default {
                 width: 100
             },
             {
-                key: 'name',
-                dataKey: 'name',
-                title: '姓名',
+                key: 'nick_name',
+                dataKey: 'nick_name',
+                title: '昵称',
+                width: 150
+            },
+            {
+                key: 'avatar_url',
+                dataKey: 'avatar_url',
+                title: '头像地址',
+                hidden: detailManageTable,
                 width: 150
             },
             {
@@ -115,23 +184,61 @@ export default {
                 dataKey: 'student_id',
                 title: '学号',
                 width: 150
-            }, 
+            },
             {
-                key: 'collage',
-                dataKey: 'collage',
-                title: '二级学院',
-                width: 150
-            }, 
+                key: 'user_type',
+                dataKey: 'user_type',
+                title: '用户类型',
+                width: 100,
+                cellRenderer: (data) => {
+                    for (let i = 0; i < userTypes.length; i++) {
+                        if (userTypes[i].value === data.rowData.user_type) {
+                            return h(
+                                ElTag,
+                                { type: userTypes[i].type },
+                                () => userTypes[i].label
+                            )
+                        }
+                    }
+                }
+            },
+            {
+                key: 'class_id',
+                dataKey: 'class_id',
+                title: '班级id',
+                hidden: detailManageTable,
+                width: 100
+            },
             {
                 key: 'class',
                 dataKey: 'class',
-                title: '班级',
-                width: 300
-            }, 
+                title: '班级名',
+                width: 200
+            },
+            {
+                key: 'major_id',
+                dataKey: 'major_id',
+                title: '专业id',
+                hidden: detailManageTable,
+                width: 100
+            },
             {
                 key: 'major',
                 dataKey: 'major',
-                title: '专业',
+                title: '专业名',
+                width: 200
+            },
+            {
+                key: 'college_id',
+                dataKey: 'college_id',
+                title: '二级学院id',
+                hidden: detailManageTable,
+                width: 150
+            },
+            {
+                key: 'college',
+                dataKey: 'college',
+                title: '二级学院',
                 width: 200
             }, {
                 key: '操作',
@@ -142,41 +249,283 @@ export default {
                     h("div", {}, [
                         h(
                             ElButton,
-                            { onClick: () => handleEdit(data.rowIndex, data.rowData), size: "small", icon: "Edit", circle: true },
+                            { onClick: () => handleEdit(data.rowIndex, data.rowData), size: "small", type: "primary", icon: "Edit", circle: true },
                         ),
                         h(
                             ElButton,
-                            { onClick: () => handleDelete(data.rowIndex, data.rowData), size: "small", type: "danger", icon: "Delete", circle: true }
+                            { onClick: () => handleDelete(data.rowIndex, data.rowData), size: "small", type: "danger", icon: "Delete", circle: true, disabled: true}
                         )
                     ])
                 ),
             },
-        ];
+        ]);
+        const rules = reactive({
+            nick_name: [
+                { required: true, message: '请填写名称', trigger: 'blur' },
+                { min: 1, max: 20, message: '长度不合法', trigger: 'blur' },
+            ],
+            avatar_url: [
+                { required: true, message: '请填写名称', trigger: 'blur' },
+                { min: 1, max: 200, message: '长度不合法', trigger: 'blur' },
+            ],
+            user_type: [
+                { required: true, message: '请选择用户类型', trigger: 'blur' },
+            ],
+            class_id: [
+                { required: true, message: '请选择班级', trigger: 'blur' },
+            ],
+        })
+
+
+        const cancelForm = (e) => {
+            drawer.show = false
+            drawer.loading = false
+            if (e === true) {
+                fetchData()
+            }
+        }
 
         const filterTableData = computed(() => {
-            return tableData.filter(data => {
-                return !search.value || data[searchType.value].toLowerCase().includes(search.value.toLowerCase());
+            return tableData.value.filter(data => {
+                return !search.value || (data[searchType.value] + "").toLowerCase().includes(search.value.toLowerCase());
             });
         });
 
         const handleEdit = (index, row) => {
-            drawer.show = true
+            fetchSelectData("");
+            formData.user_id = row.user_id
+            formData.nick_name = row.nick_name
+            formData.avatar_url = row.avatar_url;
+            formData.student_id = row.student_id;
+            formData.user_type = row.user_type;
+            formData.class_id = row.class_id;
+            formData.major_id = row.major_id;
+            formData.college_id = row.college_id
+            drawer.show = true;
             console.log("编辑", index, row);
         };
 
         const handleDelete = (index, row) => {
-            console.log("删除", index, row);
+            ElMessageBox.confirm("是否确认删除？删除该数据可能会导致其他关联数据错误。", "提示", {
+                confirmButtonText: "确认",
+                cancelButtonText: "取消",
+                type: "warning",
+            })
+                .then(() => {
+                    console.log("删除", index, row);
+                    window.$axios.post("/entity/class/delete", {
+                        "class_id": row.id
+                    }, {
+                        headers: {
+                            "Authorization": "Bearer " + localStorage.getItem("access_token")
+                        }
+                    }).then(response => {
+                        if (response.status == 200) {
+                            if (response.data.code == 200) {
+                                ElMessage({
+                                    message: `删除数据成功`,
+                                    type: 'success',
+                                })
+                                fetchData()
+                            } else {
+                                ElMessage({
+                                    message: `删除数据失败，${response.data.message}`,
+                                    type: 'error',
+                                })
+                            }
+                        } else {
+                            ElMessage({
+                                message: `删除数据失败，code: ${response.status}`,
+                                type: 'error',
+                            })
+                        }
+                    }).catch(error => {
+                        ElMessage({
+                            message: `编辑数据失败，请检查网络`,
+                            type: 'error',
+                        })
+                        console.error(error)
+                    })
+                })
+                .catch(() => {
+                    //取消：就不做任何提示了
+                });
+
         };
 
+        const addData = () => {
+            fetchSelectData("");
+            formData.user_id = "auto";
+            formData.name = "";
+            formData.major_id = "";
+            formData.college_id = "";
+            drawer.show = true;
+        }
 
         const updateData = () => {
-            drawer.loading = true
+            baseForm.value.validate((valid) => {
+                if (!valid) {
+                    ElMessage({
+                        type: "error",
+                        message: "请正确填写表单",
+                    });
+                    return
+                }
+                drawer.loading = true;
+                if (formData.user_id == 'auto') {
+                    ElMessage({
+                        message: `暂不支持该功能！`,
+                        type: 'error',
+                    })
+                } else {
+                    console.log(formData.class_id)
+                    window.$axios.post("/entity/user/update", {
+                        "user_id": formData.user_id,
+                        "nick_name": formData.nick_name,
+                        "avatar_url": formData.avatar_url,
+                        "student_id": formData.student_id,
+                        "user_type": formData.user_type,
+                        "class_id": formData.class_id,
+                    }, {
+                        headers: {
+                            "Authorization": "Bearer " + localStorage.getItem("access_token")
+                        }
+                    }).then(response => {
+                        if (response.status == 200) {
+                            if (response.data.code == 200) {
+                                cancelForm(true)
+                                ElMessage({
+                                    message: `编辑数据成功`,
+                                    type: 'success',
+                                })
+                            } else {
+                                ElMessage({
+                                    message: `编辑数据失败，${response.data.message}`,
+                                    type: 'error',
+                                })
+                            }
+                        } else {
+                            ElMessage({
+                                message: `编辑数据失败，code: ${response.status}`,
+                                type: 'error',
+                            })
+                        }
+                        drawer.loading = false;
+                    }).catch(error => {
+                        ElMessage({
+                            message: `编辑数据失败，请检查网络`,
+                            type: 'error',
+                        })
+                        console.error(error)
+                        drawer.loading = false
+                    })
+                }
+            })
         }
+
+        const fetchData = () => {
+            tableLoading.value = true;
+            window.$axios.get("/entity/user/all", {
+                headers: {
+                    "Authorization": "Bearer " + localStorage.getItem("access_token")
+                }
+            }).then(response => {
+                if (response.status == 200) {
+                    if (response.data.code == 200) {
+                        tableData.value = response.data.data || []
+                    } else {
+                        ElMessage({
+                            message: `获取数据失败，${response.data.message}`,
+                            type: 'error',
+                        })
+                    }
+                } else {
+                    ElMessage({
+                        message: `获取数据失败，code: ${response.status}`,
+                        type: 'error',
+                    })
+                }
+                tableLoading.value = false
+            }).catch(error => {
+                ElMessage({
+                    message: `获取数据失败，请检查网络`,
+                    type: 'error',
+                })
+                console.error(error)
+                tableLoading.value = false
+            })
+        }
+
+        const fetchSelectData = (query) => {
+            classData.loading = true;
+            window.$axios.get("/entity/class/all", {
+                headers: {
+                    "Authorization": "Bearer " + localStorage.getItem("access_token")
+                }
+            }).then(response => {
+                if (response.status == 200) {
+                    if (response.data.code == 200) {
+                        collegeData.value = response.data.data.map((item) => {
+                            return { value: item.college_id, label: item.college }
+                        })
+                        majorData.value = response.data.data.map((item) => {
+                            return { value: item.major_id, label: item.major }
+                        })
+                        let opt = response.data.data.map((item) => {
+                            return { value: item.id, label: item.name, major_id: item.major_id, college_id: item.college_id }
+                        })
+                        classData.value = opt.filter((item) => {
+                            return item.label.toLowerCase().includes(query.toLowerCase())
+                        })
+                    } else {
+                        ElMessage({
+                            message: `获取数据失败，${response.data.message}`,
+                            type: 'error',
+                        })
+                    }
+                } else {
+                    ElMessage({
+                        message: `获取数据失败，code: ${response.status}`,
+                        type: 'error',
+                    })
+                }
+                classData.loading = false
+            }).catch(error => {
+                ElMessage({
+                    message: `获取数据失败，请检查网络`,
+                    type: 'error',
+                })
+                console.error(error)
+                classData.loading = false
+            })
+        }
+
+        const changeSelectData = (e) => {
+            console.log(e, classData)
+            for (let i = 0; i < classData.value.length; i++) {
+                if (classData.value[i] && classData.value[i].value === e) {
+                    formData.major_id = classData.value[i].major_id;
+                    formData.college_id = classData.value[i].college_id;
+                }
+            }
+        }
+
+
+        fetchData();
+
 
         return {
             search,
             searchType,
             drawer,
+            baseForm,
+            tableLoading,
+            formData,
+            classData,
+            majorData,
+            collegeData,
+            detailManageTable,
+
 
             cancelForm,
             selectType,
@@ -184,7 +533,15 @@ export default {
             handleEdit,
             handleDelete,
             updateData,
-            columns
+            fetchData,
+            addData,
+            fetchSelectData,
+            changeSelectData,
+
+
+            rules,
+            userTypes,
+            columns,
         };
     }
 }
@@ -240,12 +597,9 @@ export default {
 .edit-drawer__footer {
     text-align: right;
 }
-
 </style>
 <style>
 .el-drawer__title {
     font-size: 18px;
 }
 </style>
-
-

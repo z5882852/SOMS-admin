@@ -53,7 +53,10 @@ const routes = [
                 path: "test",
                 name: "test",
                 component: () => import("../page/Test.vue"),
-            }
+            },{
+                path: '/redirect',
+                component: { template: '<div></div>' } // 临时空组件
+              }
         ],
     },
 ];

@@ -9,7 +9,7 @@
             <el-col :span="12" style="height: 100%; text-align: right;">
                 <el-switch v-model="detailManageTable" style="margin-right: 20px;" inactive-text="简化列表" />
                 <el-button icon="Refresh" style="margin-right: 20px;" @click="fetchData">刷新</el-button>
-                <el-button type="primary" icon="Plus" style="margin-right: 20px;" @click="addData">新增学院</el-button>
+                <el-button type="primary" icon="Plus" style="margin-right: 20px;" @click="addData">新增专业</el-button>
             </el-col>
         </el-row>
     </div>
@@ -149,7 +149,7 @@ export default {
                 { min: 1, max: 20, message: '长度不合法', trigger: 'blur' },
             ],
             college_id: [
-                { required: true, message: '请填写学院', trigger: 'blur' },
+                { required: true, message: '请选择学院', trigger: 'blur' },
             ],
         })
 
@@ -164,7 +164,7 @@ export default {
 
         const filterTableData = computed(() => {
             return tableData.value.filter(data => {
-                return !search.value || data[searchType.value].toLowerCase().includes(search.value.toLowerCase());
+                return !search.value || (data[searchType.value] + "").toLowerCase().includes(search.value.toLowerCase());
             });
         });
 
@@ -333,7 +333,7 @@ export default {
             }).then(response => {
                 if (response.status == 200) {
                     if (response.data.code == 200) {
-                        tableData.value = response.data.data
+                        tableData.value = response.data.data || []
                     } else {
                         ElMessage({
                             message: `获取数据失败，${response.data.message}`,
@@ -397,7 +397,6 @@ export default {
 
 
         fetchData();
-        fetchSelectData("");
 
 
         return {

@@ -128,7 +128,7 @@ export default {
 
         const filterTableData = computed(() => {
             return tableData.value.filter(data => {
-                return !search.value || data[searchType.value].toLowerCase().includes(search.value.toLowerCase());
+                return !search.value || (data[searchType.value] + "").toLowerCase().includes(search.value.toLowerCase());
             });
         });
 
@@ -290,7 +290,7 @@ export default {
             }).then(response => {
                 if (response.status == 200) {
                     if (response.data.code == 200) {
-                        tableData.value = response.data.data
+                        tableData.value = response.data.data || []
                     } else {
                         ElMessage({
                             message: `获取数据失败，${response.data.message}`,
