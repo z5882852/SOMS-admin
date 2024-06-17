@@ -1,152 +1,142 @@
 <template>
-  <div class="login">
-   
-
-    <div class="loginBox">
-      <h3>用户登录</h3>
-      <span class="deadline"></span>
-      <div class="form">
-        <div class="input">
-          <img src="../../assets/login/username.png" alt="" />
-          <input type="text" placeholder="请输入用户名" v-model="username" />
-        </div>
-        <div class="input">
-          <img src="../../assets/login/password.png" alt="" />
-          <input type="password" placeholder="请输入密码" v-model="password" />
-        </div>
-      
-        <!-- 登录按钮 -->
-        <div class="btn" @click="setFlag">登录</div>
-      </div>
-    </div>
-    <!-- <div class="loginbg2"></div> -->
-  </div>
+    <el-main class="login-container card" v-loading="loading">
+        <h1 class="login-title">学生成果管理系统后台</h1>
+        <el-form :model="form" label-width="auto" style="max-width: 600px">
+            <el-space fill>
+                <el-alert type="info" show-icon :closable="false">
+                    <p>当前为测试环境，暂不支持用户名登录，请使用token登录</p>
+                </el-alert>
+                <el-form-item label="token">
+                    <el-input v-model="form.token" />
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="this.setToken" class="btn">提交</el-button>
+                </el-form-item>
+            </el-space>
+        </el-form>
+    </el-main>
 </template>
 
-<script setup>
-//导入
-import Header from "./Header.vue";
-import { useRouter, useRoute } from "vue-router";
+<script>
+import { useRouter } from "vue-router";
+import { useDark, useToggle } from '@vueuse/core'
+import { ElMessage } from "element-plus";
 const $router = useRouter();
-let username = "1111";
-let password = "2222";
 
-const setFlag = () => {
-  localStorage.setItem("isLogin", 1);
-   $router.replace("/");
-};
+
+export default {
+    name: 'Login',
+    data() {
+        return {
+            loading: false,
+            form: {
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwib3BlbmlkIjoib1pid1g3Y1p1bkZkbDVQc25aM3FCbklhUlRVRSIsImV4cCI6MTcyMzgyNzU0OX0.I6dpdVQx4HZO1uz9p7xJ9xYqZmY3QADb232uLlW5Opo",
+            }
+        }
+    },
+    mounted() {
+
+    },
+    methods: {
+        setFlag() {
+            localStorage.setItem("isLogin", 1);
+            this.$router.replace("./");
+        },
+        setToken() {
+            if (!this.form.token || this.form.token === '') {
+                ElMessage({
+                    message: `请输入token`,
+                    type: 'error',
+                })
+                return
+            }
+            this.loading = true;
+            window.$axios.get("/user/token", {
+                headers: {
+                    "Authorization": "Bearer " + this.form.token
+                }
+            }).then(response => {
+                if (response.status == 200) {
+                    if (response.data.code == 200) {
+                        ElMessage({
+                            message: `token验证成功`,
+                            type: 'success',
+                        })
+                        localStorage.setItem("access_token", this.form.token);
+                        this.setFlag();
+                    } else {
+                        ElMessage({
+                            message: `token验证失败，${response.data.message}`,
+                            type: 'error',
+                        })
+                    }
+                } else {
+                    ElMessage({
+                        message: `token验证失败，: ${response.status}`,
+                        type: 'error',
+                    })
+                }
+                this.loading = false;
+            }).catch(error => {
+                this.loading = false;
+                if (error.response && error.response.status === 401) {
+                    ElMessage({
+                        message: `token验证失败，请检查token是否正确`,
+                        type: 'error',
+                    })
+                } else {
+                    ElMessage({
+                        message: `token验证失败，请检查网络`,
+                        type: 'error',
+                    })
+                }
+                console.error(error)
+            })
+
+        }
+    },
+    setup() {
+        const isDark = useDark()
+        const toggleDark = useToggle(isDark)
+    }
+}
 </script>
 
-<style>
-.login {
-  width: 100%;
-  height: 100%;
-  /* background-color: darkgray; */
-}
-/* .loginbg1 {
-  position: absolute;
-  left: 50rem;
-  top: 45rem;
-  width: 30rem;
-  height: 50rem;
-  background-image: url(../../assets/login/decoration1.png);
-  background-repeat: no-repeat;
-  background-size: cover;
-  z-index: 1;
-} */
-
-/* .loginbg2 {
-  position: absolute;
-  right: 35rem;
-  top: 45rem;
-  width: 40rem;
-  height: 40rem;
-  background-image: url(../../assets/login/decoration2.png);
-  background-repeat: no-repeat;
-  z-index: 1;
-} */
-
-.loginBox {
-  width: 62rem;
-  height: 50rem;
-
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -25rem;
-  margin-left: -31rem;
-  z-index: 2;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: #efefef;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-}
-.loginBox h3 {
-  font-size: 3rem;
-  font-weight: 600;
-  color: rgb(62, 197, 231);
-  margin-top: 7rem;
-  text-align: center;
-}
-.deadline {
-  display: block;
-  width: 10rem;
-  height: 0.5rem;
-  background: #01cfff;
-  border-radius: 0.5rem;
-  margin-top: 1rem;
-}
-.form {
-  width: 44.5rem;
-  height: 44.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-around;
+<style scoped>
+.login-title {
+    text-align: center;
+    display: block;
+    font-size: 32px;
+    margin-block-start: 0.67em;
+    margin-block-end: 0.67em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    font-weight: bold;
+    unicode-bidi: isolate;
+    margin-bottom: 50px;
 }
 
-.input {
-  width: 28rem;
-  height: 5rem;
-  line-height: 5rem;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+.login-container {
+    padding: 100px;
+    padding-top: 50px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
-.input img {
-  margin-left: 3rem;
+
+.card {
+    /* 添加阴影以创建 "card" 效果 */
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    transition: 0.3s;
 }
-.form input {
-  border: none;
-  outline: none;
-  background-color: transparent;
-  border: none;
-  color: aliceblue;
+
+/* 鼠标悬停时，添加更深的阴影 */
+.card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
 }
-::-webkit-input-placeholder {
-  color: rgb(51, 189, 239);
-}
-.input input {
-  width: 18rem;
-  height: 2.2rem;
-  margin-left: 2rem;
-  font-size: 2.4rem;
-}
-.input .code {
-  width: 23rem;
-  height: 4.3rem;
-  line-height: 1.1rem;
-}
+
 .btn {
-  width: 16rem;
-  height: 5.6rem;
-  line-height: 5.6rem;
-  text-align: center;
-  font-size: 2.5rem;
-  color: rgb(250, 250, 250);
-  cursor: pointer;
-  margin-bottom: 5rem;
+    margin: 0 auto;
 }
 </style>

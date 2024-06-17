@@ -3,7 +3,7 @@
         <el-container class="box">
             <!-- 左侧菜单栏 -->
             <el-aside class="el-aside">
-                <h1 class="logoBox">管理系统后台</h1>
+                <h1 class="logoBox">学生成果管理系统后台</h1>
                 <el-menu active-text-color="#ffd04b" background-color="#001529" class="el-menu-vertical-demo"
                     default-active="2" text-color="#fff" :router="true">
                     <template v-for="item in asideMenu">
@@ -52,9 +52,7 @@
                         <el-menu-item index="1" class="fr">管理员-1</el-menu-item>
                         <el-sub-menu index="2" class="fr">
                             <template #title class="fr">我的工作台</template>
-                            <el-menu-item index="2-1">我的消息</el-menu-item>
-                            <el-menu-item index="2-2">设置</el-menu-item>
-                            <el-menu-item index="2-3" @click="exitLogin">退出登录</el-menu-item>
+                            <el-menu-item index="2-1" @click="exitLogin">退出登录</el-menu-item>
                         </el-sub-menu>
                     </el-menu>
                 </el-header>
@@ -257,6 +255,7 @@ export default {
     left: 30px;
     font-size: 24px;
     color: #fff;
+    z-index: 10;
 }
 
 .box {

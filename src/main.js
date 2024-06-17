@@ -28,7 +28,8 @@ app.provide('detailManageTable', ref(true));
 app.mount('#app')
 
 
-window.$baseURL = 'http://localhost:8088'
+// window.$baseURL = 'http://localhost:8088'
+window.$baseURL = 'http://soms-fastapi-110860-4-1327191391.sh.run.tcloudbase.com/'
 // window.$baseURL = 'http://114.132.72.61:1022'
 window.$axios = axios.create({
     //设置超时时间
