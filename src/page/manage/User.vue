@@ -13,6 +13,7 @@
                     <el-button type="primary" icon="Plus" style="margin-right: 20px;" @click="addData"
                         :disabled="true">新增用户</el-button>
                 </el-tooltip>
+                <el-button type="primary" @click="openExcelDialog">导入</el-button>
             </el-col>
         </el-row>
     </div>
@@ -76,16 +77,20 @@
             </div>
         </div>
     </el-drawer>
+    <ExcelImportExport ref="excelImportExport" />
 </template>
 
 <script>
 import { computed, ref, h, reactive, inject } from 'vue';
 import { ElButton, ElMessage, ElMessageBox, ElTag } from "element-plus";
-
+import ExcelImportExport from '../../components/ExcelImportExport.vue';
 
 
 export default {
     name: 'User',
+    components: {
+        ExcelImportExport
+    },
     mounted() {
     },
     setup() {
@@ -253,7 +258,7 @@ export default {
                         ),
                         h(
                             ElButton,
-                            { onClick: () => handleDelete(data.rowIndex, data.rowData), size: "small", type: "danger", icon: "Delete", circle: true, disabled: true}
+                            { onClick: () => handleDelete(data.rowIndex, data.rowData), size: "small", type: "danger", icon: "Delete", circle: true, disabled: true }
                         )
                     ])
                 ),
@@ -543,6 +548,20 @@ export default {
             userTypes,
             columns,
         };
+    },
+    methods: {
+        handleImportSuccess(importedData) {
+            console.log('导入的数据:', importedData);
+        },
+        openExcelDialog() {
+            const fields = [
+                { name: "学院", value: "college" },
+                { name: "区队", value: "class" },
+                { name: "姓名", value: "nick_name" },
+                { name: "学号", value: "student_id" },
+            ];
+            this.$refs.excelImportExport.openDialog(fields, this.handleImportSuccess);
+        }
     }
 }
 </script>

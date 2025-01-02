@@ -1,6 +1,7 @@
 import {createWebHistory, createRouter} from "vue-router"
 
 const routes = [
+
     {
         path: '/login',
         name: "login",
@@ -53,11 +54,13 @@ const routes = [
                 path: "test",
                 name: "test",
                 component: () => import("../page/Test.vue"),
-            },{
-                path: '/redirect',
-                component: { template: '<div></div>' } // 临时空组件
-              }
+            },
         ],
+    },
+    {
+        path: '/export',
+        name: "export",
+        component: () => import("../components/ExcelImportExport.vue")
     },
 ];
 

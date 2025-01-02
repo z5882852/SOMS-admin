@@ -12,7 +12,7 @@
             <p class="text item">使得信息更加直观、清晰，有利于用户快速了解数据内容</p>
             <p class="text item">准确把握信息要点，提高信息传达效率</p>
             <template #footer>
-                <a href="/data"><el-button icon="Link" target="_Blank">前往</el-button></a>
+                <a href="/data/index.html"><el-button icon="Link" target="_Blank">前往</el-button></a>
             </template>
         </el-card>
 
